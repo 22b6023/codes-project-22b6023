@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Academic Risk Prediction Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Final Year Project</p>
+        <h1>Student Academic Risk Prediction Dashboard</h1>
+        <p class="hero-text">
+          Enter academic history up to the semester before the prediction point. The system will generate the required features automatically and predict future academic risk using the trained model.
+        </p>
+      </div>
+    </header>
+
+    <div class="view-switch">
+      <button class="view-btn active" data-view="studentView">Student View</button>
+      <button class="view-btn" data-view="lecturerView">Lecturer View</button>
+    </div>
+
+    <!-- =========================
+         STUDENT VIEW
+    ========================== -->
+    <div id="studentView" class="view-panel active-view">
+      <main class="student-flow-layout">
+        <section class="student-input-area">
+          <div class="card">
+            <div class="card-header">
+              <h2>Student Information</h2>
+              <p>Enter the student details and choose the semester to predict.</p>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="studentId">Student ID</label>
+                <input type="text" id="studentId" placeholder="e.g. 22B6023" />
+              </div>
+
+              <div class="field">
+                <label for="programme">Major</label>
+                <input type="text" id="programme" placeholder="e.g. Data Science" />
+              </div>
+
+              <div class="field">
+                <label for="predictSemesterX">Predict Risk Level at Semester X</label>
+                <select id="predictSemesterX">
+                  <option value="2">Semester 2</option>
+                  <option value="3">Semester 3</option>
+                  <option value="4">Semester 4</option>
+                  <option value="5" selected>Semester 5</option>
+                  <option value="6">Semester 6</option>
+                  <option value="7">Semester 7</option>
+                  <option value="8">Semester 8</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="scopeDisplay">History Used for Prediction</label>
+                <input type="text" id="scopeDisplay" value="Semester 1 to 4" readonly />
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Historical Semester Input</h2>
+              <p>
+                The form below is generated dynamically from Semester 1 to Semester X-1.
+                Enter GPA, module code, credits, and marks for each semester.
+              </p>
+            </div>
+          </div>
+
+          <div id="semesterSections"></div>
+
+          <div class="card">
+            <div class="button-row">
+             <button class="primary-btn" id="predictBtn">Predict Risk</button>
+             <button class="secondary-btn" id="sampleHighBtn">Use High Risk Sample</button>
+             <button class="secondary-btn" id="sampleModerateBtn">Use Moderate Risk Sample</button>
+             <button class="secondary-btn" id="sampleLowBtn">Use Low Risk Sample</button>
+             <button class="secondary-btn" id="clearBtn">Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="studentDashboardOutput" class="student-output-area">
+          <div class="card result-card highlight-card">
+            <div class="card-header">
+              <h2>Prediction Result</h2>
+              <p>Main student outcome returned from the selected checkpoint model.</p>
+            </div>
+
+            <div id="resultState" class="result-empty">
+              No prediction yet. Select Semester X, enter historical data, and click <strong>Predict Risk</strong>.
+            </div>
+
+            <div id="resultContent" class="hidden">
+              <div class="risk-top">
+                <div>
+                  <p class="mini-label">Predicted Risk Level</p>
+                  <h3 id="riskLabel">-</h3>
+                </div>
+                <span id="riskBadge" class="risk-badge">-</span>
+              </div>
+
+              <div class="result-box">
+                <p class="mini-label">Student</p>
+                <p id="studentDisplay">-</p>
+              </div>
+
+              <div class="result-box">
+                <p class="mini-label">Prediction Point</p>
+                <p id="predictionPointDisplay">-</p>
+              </div>
+
+              <div class="result-box">
+                <p class="mini-label">Model Checkpoint Used</p>
+                <p id="checkpointUsedDisplay">-</p>
+              </div>
+
+              <div class="result-box">
+                <p class="mini-label">What This Means</p>
+                <p id="riskMeaning">-</p>
+              </div>
+
+              <div class="result-box">
+                <p class="mini-label">Recommended Action</p>
+                <p id="riskRecommendation">-</p>
+              </div>
+              <div class="card notice-card">
+                <div class="card-header">
+                 <h2>Important Note</h2>
+                </div>
+                <p class="notice-text">
+                  <p class="notice-text">
+                     This result is meant to help you monitor your academic progress early. It is based on a prediction model, so it may not always be correct. Please use it as a guide only, and consider your actual results, lecturer advice, and academic support options when making decisions.
+                  </p>    
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid-two">
+            <div class="card">
+              <div class="card-header">
+                <h2>Prediction Timeline</h2>
+                <p>Shows the historical semesters entered and the semester being predicted.</p>
+              </div>
+
+              <div id="predictionTimeline" class="timeline-wrap">
+                <div class="empty-note">No timeline yet.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h2>Quick Academic Overview</h2>
+                <p>Key values from the latest entered semester before Semester X.</p>
+              </div>
+
+              <div class="summary-grid">
+                <div class="summary-item">
+                  <span>Latest GPA</span>
+                  <strong id="summaryLatestGpa">-</strong>
+                </div>
+                <div class="summary-item">
+                  <span>Latest WAVG Mark</span>
+                  <strong id="summaryLatestWavg">-</strong>
+                </div>
+                <div class="summary-item">
+                  <span>Lowest Mark</span>
+                  <strong id="summaryLatestMin">-</strong>
+                </div>
+                <div class="summary-item">
+                  <span>Highest Mark</span>
+                  <strong id="summaryLatestMax">-</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Semester Overview</h2>
+              <p>Summary of GPA and academic performance for each entered semester.</p>
+            </div>
+
+            <div id="semesterOverviewCards" class="overview-grid">
+              <div class="empty-note">No semester summary yet.</div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid-two">
+            <div class="card">
+              <div class="card-header">
+                <h2>GPA Trend</h2>
+                <p>Historical GPA trend based on entered semesters only.</p>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="gpaTrendChart"></canvas>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h2>Weighted Mark Trend</h2>
+                <p>Historical weighted average mark trend based on entered semesters only.</p>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="wavgTrendChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Weak Areas</h2>
+              <p>Weakest areas grouped by module level and module type.</p>
+            </div>
+
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span>Weakest Module Level</span>
+                <strong id="weakestLevelDisplay">-</strong>
+              </div>
+              <div class="summary-item">
+                <span>Weakest Module Type</span>
+                <strong id="weakestTypeDisplay">-</strong>
+              </div>
+            </div>
+
+            <div class="overview-grid" id="weakAreaBreakdown">
+              <div class="empty-note">No weak area summary yet.</div>
+            </div>
+          </div>
+
+          <details class="card technical-card">
+            <summary>Technical Feature Details</summary>
+            <p class="technical-note">
+              These are generated model features used internally for prediction.
+            </p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody id="featurePreviewBody">
+                  <tr>
+                    <td colspan="2" class="empty-note">No features computed yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+      </main>
+    </div>
+
+    <!--
+         LECTURER VIEW
+    -->
+    <div id="lecturerView" class="view-panel">
+      <main class="student-flow-layout lecturer-flow-layout">
+        <section class="student-input-area lecturer-input-area">
+          <div class="card">
+            <div class="card-header">
+              <h2>Lecturer Upload</h2>
+              <p>Upload the cohort workbook to generate batch predictions and dashboard insights.</p>
+            </div>
+
+            <div class="upload-box">
+              <p class="upload-title">Upload cohort workbook</p>
+              <p class="upload-sub">
+                Each sheet must contain: REGNO, MAJOR, MODULE_CODE, MC, MARKS, GPA
+              </p>
+              <input type="file" id="lecturerFile" accept=".xlsx,.xls" />
+            </div>
+
+            <div class="button-row">
+              <button class="primary-btn" id="predictBatchBtn">Run Batch Prediction</button>
+              <button class="secondary-btn" id="clearBatchBtn">Clear</button>
+              <button class="secondary-btn" id="exportBatchBtn">Export Full List</button>
+            </div>
+            <div id="batchLoadingState" class="loading-state hidden">
+              Running batch prediction. Please wait...
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Risk Filter</h2>
+              <p>Click a risk category to filter the detailed student table.</p>
+            </div>
+
+            <div class="filter-row">
+              <button class="filter-btn active-filter" data-risk="All">All Students</button>
+              <button class="filter-btn" data-risk="High Risk">High Risk</button>
+              <button class="filter-btn" data-risk="Moderate Risk">Moderate Risk</button>
+              <button class="filter-btn" data-risk="Low Risk">Low Risk</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Detailed Student List</h2>
+              <p>REGNO, major, GPA trend, latest weighted mark, and predicted risk.</p>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>REGNO</th>
+                    <th>MAJOR</th>
+                    <th>GPA_Y1S1</th>
+                    <th>GPA_Y1S2</th>
+                    <th>GPA_Y2S1</th>
+                    <th>GPA_Y2S2</th>
+                    <th>Latest WAVG</th>
+                    <th>Risk</th>
+                  </tr>
+                </thead>
+                <tbody id="batchTableBody">
+                  <tr>
+                    <td colspan="8" class="empty-note">No batch prediction yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="lecturerDashboardOutput" class="student-output-area lecturer-output-area">
+          <div class="card highlight-card">
+            <div class="card-header">
+              <h2>Cohort Risk Summary</h2>
+              <p>Counts and percentages across the uploaded cohort.</p>
+            </div>
+
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span>Total Students</span>
+                <strong id="batchTotalStudents">-</strong>
+                <small id="batchTotalPct">-</small>
+              </div>
+              <div class="summary-item">
+                <span>High Risk</span>
+                <strong id="batchHighRisk">-</strong>
+                <small id="batchHighRiskPct">-</small>
+              </div>
+              <div class="summary-item">
+                <span>Moderate Risk</span>
+                <strong id="batchModerateRisk">-</strong>
+                <small id="batchModerateRiskPct">-</small>
+              </div>
+              <div class="summary-item">
+                <span>Low Risk</span>
+                <strong id="batchLowRisk">-</strong>
+                <small id="batchLowRiskPct">-</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Derived Analytics</h2>
+              <p>Important insights for lecturers and deans.</p>
+            </div>
+
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span>Major with Most High Risk</span>
+                <strong id="majorMostHighRisk">-</strong>
+              </div>
+              <div class="summary-item">
+                <span>Sharpest Decline</span>
+                <strong id="sharpestDecline">-</strong>
+              </div>
+              <div class="summary-item">
+                <span>Weakest Module Level</span>
+                <strong id="weakestLevel">-</strong>
+              </div>
+              <div class="summary-item">
+                <span>Weakest Module Type</span>
+                <strong id="weakestType">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Risk Distribution</h2>
+              <p>Overall distribution of predicted risk levels.</p>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="batchRiskDistributionChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Risk Count by Semester</h2>
+              <p>Checkpoint-based cohort prediction counts.</p>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="batchRiskBySemesterChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>GPA Trend by Major</h2>
+              <p>Average GPA trend for the top majors in the uploaded cohort.</p>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="batchGpaByMajorChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Weighted Mark Trend by Semester</h2>
+              <p>Average weighted mark across the cohort by semester.</p>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="batchWavgTrendChart"></canvas>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
